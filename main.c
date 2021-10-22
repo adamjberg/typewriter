@@ -2,9 +2,15 @@
 #include <stdio.h>
 #include <time.h>
 
+gboolean dirty = FALSE;
+
 static gboolean
 handleDirtyTimer(gpointer data)
 {
+  if (!dirty) {
+    return;
+  }
+
   GtkTextBuffer *textBuffer = (GtkTextBuffer *)data;
 
   time_t t = time(NULL);
@@ -32,9 +38,13 @@ handleDirtyTimer(gpointer data)
 
   g_free(text);
 
-  printf("Saved\n");
+  dirty = FALSE;
 
   return TRUE;
+}
+
+void handleTextChanged() {
+  dirty = TRUE;
 }
 
 static void
@@ -55,11 +65,13 @@ activate(GtkApplication *app,
 
   buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
 
-  gtk_text_buffer_set_text(buffer, "Hello, this is some text", -1);
+  g_signal_connect(buffer, "changed", G_CALLBACK(handleTextChanged), NULL);
+
+  gtk_text_buffer_set_text(buffer, "", -1);
 
   gtk_container_add(GTK_WINDOW(window), view);
 
-  g_timeout_add_seconds(5, handleDirtyTimer, buffer);
+  g_timeout_add_seconds(3, handleDirtyTimer, buffer);
 
   gtk_widget_show_all(window);
 }
