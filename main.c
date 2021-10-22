@@ -67,7 +67,31 @@ activate(GtkApplication *app,
 
   g_signal_connect(buffer, "changed", G_CALLBACK(handleTextChanged), NULL);
 
-  gtk_text_buffer_set_text(buffer, "", -1);
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
+
+  char filename[256];
+  memset(&filename, 0x0, 256);
+  snprintf(filename, 255, "%d-%02d-%02d.md", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+
+  #define CHUNK 4096 /* read 1024 bytes at a time */
+  char buf[CHUNK];
+  memset(&buf, 0x0, CHUNK);
+  FILE *file;
+  size_t nread;
+
+  file = fopen(filename, "r");
+  if (file) {
+      nread = fread(buf, 1, sizeof buf, file);
+      if (ferror(file)) {
+          /* deal with error */
+      }
+      fclose(file);
+  }
+
+  printf("%s", buf);
+
+  gtk_text_buffer_set_text(buffer, buf, -1);
 
   gtk_container_add(GTK_WINDOW(window), view);
 
