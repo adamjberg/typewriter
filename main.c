@@ -1,6 +1,41 @@
 #include <gtk/gtk.h>
 #include <stdio.h>
+#include <time.h>
 
+static gboolean
+handleDirtyTimer(gpointer data)
+{
+  GtkTextBuffer *textBuffer = (GtkTextBuffer *)data;
+
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
+
+  char filename[256];
+  memset(&filename, 0x0, 256);
+  snprintf(filename, 255, "%d-%02d-%02d.md", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+
+  GtkTextIter start = {
+      0,
+  };
+  GtkTextIter end = {
+      0,
+  };
+  gtk_text_buffer_get_start_iter(textBuffer, &start);
+  gtk_text_buffer_get_end_iter(textBuffer, &end);
+  gchar *text;
+  text = gtk_text_buffer_get_text(textBuffer, &start, &end, FALSE);
+
+  FILE *fp;
+  fp = fopen(filename, "w");
+  fprintf(fp, "%s", text);
+  fclose(fp);
+
+  g_free(text);
+
+  printf("Saved\n");
+
+  return TRUE;
+}
 
 static void
 activate(GtkApplication *app,
@@ -22,7 +57,9 @@ activate(GtkApplication *app,
 
   gtk_text_buffer_set_text(buffer, "Hello, this is some text", -1);
 
-  gtk_container_add (GTK_WINDOW (window), view);
+  gtk_container_add(GTK_WINDOW(window), view);
+
+  g_timeout_add_seconds(5, handleDirtyTimer, buffer);
 
   gtk_widget_show_all(window);
 }
@@ -33,15 +70,12 @@ int main(int argc,
   GtkApplication *app;
   int status;
 
-  FILE *fp;
-  fp = fopen("2021-10-21.md", "w");
-  fprintf(fp, "Hello World\n");
-  fclose(fp);
-
   app = gtk_application_new("com.xyzdigital.engram.typewriter", G_APPLICATION_FLAGS_NONE);
   g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
   status = g_application_run(G_APPLICATION(app), argc, argv);
   g_object_unref(app);
+
+  gtk_main_quit();
 
   return status;
 }
